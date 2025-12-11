@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: python -c "import migrations; migrations.init_db()" && python main.py
     envVars:
       - key: PYTHON_VERSION
         value: "3.10"
