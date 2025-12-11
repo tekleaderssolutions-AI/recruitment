@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Meet Bot Logger",
+  "version": "1.0",
+  "description": "Logs events from Google Meet",
+
+  "permissions": [
+    
+    "scripting",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "http://127.0.0.1:8000/*"
+  ],
+
+  
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

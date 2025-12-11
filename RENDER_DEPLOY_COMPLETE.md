@@ -128,7 +128,7 @@ SMTP_PASSWORD = <16-char-app-password>
 FROM_EMAIL = your-email@gmail.com
 
 GEMINI_API_KEY = <your-api-key>
-CHAT_MODEL = gemini-2.0-flash
+CHAT_MODEL = gemini-2.5-flash
 EMBEDDING_MODEL = text-embedding-004
 
 GOOGLE_CALENDAR_CREDENTIALS_PATH = credentials.json

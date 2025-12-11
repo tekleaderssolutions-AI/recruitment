@@ -83,19 +83,23 @@ def get_calendar_service():
         raise Exception(f"Failed to create Calendar service: {str(e)}")
 
 
-def get_available_slots(date: datetime, num_slots: int = 3) -> List[Dict[str, Any]]:
+def get_available_slots(date: datetime, num_slots: int = 3, calendar_email: str = None) -> List[Dict[str, Any]]:
     """
     Fetch available time slots for a given date.
     
     Args:
         date: The date to check availability (datetime object)
         num_slots: Number of time slots to return (default: 3)
+        calendar_email: Email of the calendar to check (defaults to INTERVIEWER_EMAIL)
     
     Returns:
         List of dictionaries with 'start_time' and 'end_time' datetime objects
     """
     try:
         service = get_calendar_service()
+        
+        # Use provided calendar email or default to INTERVIEWER_EMAIL
+        target_calendar = calendar_email or INTERVIEWER_EMAIL
         
         # Define working hours (9 AM to 5 PM)
         start_of_day = date.replace(hour=9, minute=0, second=0, microsecond=0)
@@ -105,12 +109,12 @@ def get_available_slots(date: datetime, num_slots: int = 3) -> List[Dict[str, An
         body = {
             "timeMin": start_of_day.isoformat() + 'Z',
             "timeMax": end_of_day.isoformat() + 'Z',
-            "items": [{"id": INTERVIEWER_EMAIL}],
+            "items": [{"id": target_calendar}],
             "timeZone": "Asia/Kolkata"
         }
         
         freebusy_result = service.freebusy().query(body=body).execute()
-        busy_times = freebusy_result['calendars'][INTERVIEWER_EMAIL].get('busy', [])
+        busy_times = freebusy_result['calendars'][target_calendar].get('busy', [])
         
         # Convert busy times to datetime objects
         busy_periods = []

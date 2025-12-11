@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Meet Bot</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+        margin: 0;
+        padding: 12px 12px 10px;
+        width: 260px;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 8px;
+      }
+      label {
+        font-size: 11px;
+        color: #4b5563;
+        display: block;
+        margin-bottom: 2px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 4px 6px;
+        margin-bottom: 8px;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+        font-size: 12px;
+      }
+      button {
+        width: 100%;
+        padding: 6px 0;
+        border-radius: 4px;
+        border: none;
+        background: #2563eb;
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+      small {
+        display: block;
+        margin-top: 6px;
+        font-size: 10px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Hiring Meet Bot</h1>
+    <label for="meet-url">Google Meet URL</label>
+    <input id="meet-url" placeholder="https://meet.google.com/..." />
+
+    <label for="interview-id">Interview ID (optional)</label>
+    <input id="interview-id" placeholder="UUID from dashboard" />
+
+    <label for="backend-url">Backend URL</label>
+    <input id="backend-url" placeholder="http://localhost:8000" />
+
+    <button id="start-btn">Start Bot</button>
+
+    <small>
+      Tip: copy Meet link and Interview ID from your HR dashboard row, then click
+      “Start Bot”.
+    </small>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
+
+

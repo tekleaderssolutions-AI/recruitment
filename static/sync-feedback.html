@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Feedback - Tek Leaders</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .upload-container {
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 30px;
+        }
+
+        .instructions {
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .upload-zone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: #f9f9f9;
+            transition: all 0.3s;
+        }
+
+        .upload-zone:hover {
+            border-color: #4CAF50;
+            background-color: #f0f8f0;
+        }
+
+        .upload-zone.drag-over {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        #result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="upload-container">
+            <header style="margin-bottom: 30px;">
+                <h1>📊 Sync Feedback Data</h1>
+                <p class="subtitle">Import interview feedback from Google Sheets</p>
+            </header>
+
+            <div class="instructions">
+                <h3>How to Export & Sync:</h3>
+                <ol>
+                    <li>Open your <a
+                            href="https://docs.google.com/spreadsheets/d/19BJR8_AZ5sYs1iUvN8qLOtdI-zEUYRYq7sBBUleTF-o/edit?usp=sharing"
+                            target="_blank">Google Sheets</a></li>
+                    <li>Click <strong>File → Download → Comma Separated Values (.csv)</strong></li>
+                    <li>Upload the downloaded CSV file below</li>
+                    <li>Click "Sync to Database"</li>
+                </ol>
+                <p style="margin: 10px 0 0 0; font-size: 14px;">
+                    💡 <em>Tip: The CSV should have columns for Timestamp, Applicant Name, Interview Date, Interviewer,
+                        ratings, etc.</em>
+                </p>
+            </div>
+
+            <div class="card">
+                <form id="sync-form">
+                    <div class="upload-zone" id="upload-zone">
+                        <input type="file" id="csv-file" accept=".csv" style="display: none;" required>
+                        <p style="font-size: 48px; margin: 0;">📄</p>
+                        <p style="margin: 10px 0; font-size: 18px;"><strong>Click to select CSV file</strong></p>
+                        <p style="margin: 0; color: #666;">or drag and drop here</p>
+                        <p id="file-name" style="margin-top: 15px; color: #4CAF50; font-weight: bold;"></p>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">
+                            🔄 Sync to Database
+                        </button>
+                        <a href="/" class="btn btn-outline">
+                            ← Back to Home
+                        </a>
+                    </div>
+                </form>
+
+                <div id="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('csv-file');
+        const fileNameDisplay = document.getElementById('file-name');
+        const syncForm = document.getElementById('sync-form');
+        const resultDiv = document.getElementById('result');
+
+        // Click to upload
+        uploadZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // File selected
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileNameDisplay.textContent = '✓ Selected: ' + e.target.files[0].name;
+            }
+        });
+
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].name.endsWith('.csv')) {
+                fileInput.files = files;
+                fileNameDisplay.textContent = '✓ Selected: ' + files[0].name;
+            } else {
+                alert('Please drop a CSV file');
+            }
+        });
+
+        // Form submission
+        syncForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!fileInput.files[0]) {
+                alert('Please select a CSV file first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            resultDiv.style.display = 'none';
+            const submitBtn = syncForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Syncing...';
+
+            try {
+                const response = await fetch('/sync-feedback-csv', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let errorHtml = '';
+                    if (data.skipped > 0 && data.errors) {
+                        errorHtml = '<div style="margin-top:10px; font-size:12px; color:#721c24; background-color:#fff3cd; padding:10px; border-radius:4px;"><strong>Errors:</strong><br>' +
+                            data.errors.join('<br>') + '</div>';
+                    }
+
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Success!</strong><br>
+                        ${data.message}<br>
+                        <small>Inserted: ${data.inserted} | Skipped: ${data.skipped}</small>
+                        ${errorHtml}
+                    `;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = `
+                        <strong>❌ Error:</strong><br>
+                        ${data.error}
+                    `;
+                }
+
+                resultDiv.style.display = 'block';
+
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<strong>❌ Error:</strong><br>${error.message}`;
+                resultDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🔄 Sync to Database';
+            }
+        });
+    </script>
+</body>
+
+</html>

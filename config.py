@@ -28,7 +28,7 @@ def get_env(name: str, default: str | None = None, *, required: bool = False) ->
 GEMINI_API_KEY = get_env("GEMINI_API_KEY", required=True)
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
-CHAT_MODEL = get_env("CHAT_MODEL", "gemini-2.0-flash-exp")
+CHAT_MODEL = get_env("CHAT_MODEL", "gemini-2.5-flash-exp")
 EMBEDDING_MODEL = get_env("EMBEDDING_MODEL", "text-embedding-004")
  
 DB_HOST = get_env("DB_HOST", "localhost")
@@ -49,12 +49,27 @@ COMPANY_NAME = get_env("COMPANY_NAME", "Tek Leaders")
 
 # Google Calendar Configuration
 GOOGLE_CALENDAR_CREDENTIALS_PATH = get_env("GOOGLE_CALENDAR_CREDENTIALS_PATH", "credentials.json")
-INTERVIEWER_EMAIL = get_env("INTERVIEWER_EMAIL", "akkireddy41472@gmail.com")
+INTERVIEWER_EMAIL = get_env("INTERVIEWER_EMAIL", "akkireddy41473@gmail.com")
+HR_INTERVIEWER_EMAIL = get_env("HR_INTERVIEWER_EMAIL", "tekleaders.solutions@gmail.com")  # HR Round interviewer
 INTERVIEW_DURATION_MINUTES = int(get_env("INTERVIEW_DURATION_MINUTES", "60"))
 
 # BASE_URL: Must be publicly accessible for email acknowledgement links to work
 # For testing: Use ngrok (ngrok http 8000) and set to your ngrok URL
 # For production: Set to your deployed application URL
 BASE_URL = get_env("BASE_URL", "http://localhost:8000")
+
 # Admin secret used to authorize HR/admin actions (e.g., finalizing interviews)
 ADMIN_SECRET = get_env("ADMIN_SECRET", "changeme_admin_secret")
+
+# Feedback Form Configuration
+FEEDBACK_FORM_LINK = get_env("FEEDBACK_FORM_LINK", "https://docs.google.com/forms/d/e/1FAIpQLSdjWfUGHoSvMEeeN1pg53Nvvs6u4SvPRx3OzD2huZCMeNhJRg/viewform?usp=publish-editor")
+
+# Google Sheets link where feedback responses are stored
+FEEDBACK_RESPONSES_SHEET_LINK = get_env("FEEDBACK_RESPONSES_SHEET_LINK", "https://docs.google.com/spreadsheets/d/19BJR8_AZ5sYs1iUvN8qLOtdI-zEUYRYq7sBBUleTF-o/edit?usp=sharing")
+
+# Google Sheets ID extracted from the link
+FEEDBACK_SHEET_ID = "19BJR8_AZ5sYs1iUvN8qLOtdI-zEUYRYq7sBBUleTF-o"
+
+# Google Sheets sync configuration
+SHEETS_SYNC_ENABLED = get_env("SHEETS_SYNC_ENABLED", "true").lower() == "true"
+SHEETS_SYNC_INTERVAL_MINUTES = int(get_env("SHEETS_SYNC_INTERVAL_MINUTES", "5"))  # Sync every 5 minutes

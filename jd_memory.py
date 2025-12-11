@@ -119,6 +119,36 @@ def create_memory(
     exp = structured_jd.get("experience") or {}
     salary = structured_jd.get("salary") or {}
 
+    # Generate a sequential short ID (tek0001, tek0002, etc.)
+    with db_cursor() as cur:
+        # Get the highest sequential number from existing JD short_ids
+        cur.execute(
+            """
+            SELECT short_id FROM memories 
+            WHERE type = 'job' AND short_id LIKE 'tek%'
+            ORDER BY short_id DESC 
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        
+        if row and row[0]:
+            # Extract number from last short_id (e.g., 'tek0001' -> 1)
+            last_id = row[0]
+            try:
+                last_num = int(last_id.replace('tek', ''))
+                next_num = last_num + 1
+            except ValueError:
+                # If parsing fails, start from 1
+                next_num = 1
+        else:
+            # No existing JDs, start from 1
+            next_num = 1
+        
+        # Format as tek0001, tek0002, etc. (4 digits with leading zeros)
+        short_id = f"tek{next_num:04d}"
+
+
     metadata: Dict[str, Any] = {
         "job_id": job_id,
         "location": structured_jd.get("location"),
@@ -137,6 +167,7 @@ def create_memory(
         "raw_text_snippet": raw_text_snippet,
         "embedding_model": EMBEDDING_MODEL,
         "chunk_index": 0,
+        "short_id": short_id,
     }
 
     canonical_json = structured_jd
@@ -144,10 +175,10 @@ def create_memory(
     with db_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO memories (id, type, title, text, embedding, metadata, canonical_json, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s::vector, %s, %s, NOW(), NOW())
+            INSERT INTO memories (id, type, title, text, embedding, metadata, canonical_json, short_id, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s::vector, %s, %s, %s, NOW(), NOW())
             """,
-            [
+            (
                 memory_uuid,
                 "job",
                 title,
@@ -155,14 +186,12 @@ def create_memory(
                 embedding_literal,
                 Json(metadata),
                 Json(canonical_json),
-            ],
+                short_id
+            )
         )
 
-    memory_id = f"job:{job_id}:v1" if job_id else f"job:{memory_uuid}"
-
     return {
-        "id": memory_uuid,  # Database UUID for embedding-based matching
-        "memory_id": memory_id,
+        "id": memory_uuid,
         "type": "job",
         "title": title,
         "summary": summary,
@@ -175,5 +204,6 @@ def create_memory(
         "chunk_index": 0,
         "source_url": source_url,
         "pii_flag": pii_flag,
-        "role": structured_jd.get("role"),  # Add role for display
+        "role": structured_jd.get("role"),
+        "short_id": short_id,
     }

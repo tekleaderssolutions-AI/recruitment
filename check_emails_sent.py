@@ -122,8 +122,7 @@ print(f"Sending test email to: {test_email}")
 result = send_email(
     to_email=test_email,
     subject=test_subject,
-    html_body=test_body,
-    cc_email="akkireddy41473@gmail.com"
+    html_body=test_body
 )
 
 print(f"\nResult: {result['message']}")

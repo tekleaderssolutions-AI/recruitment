@@ -13,27 +13,42 @@ from config import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, FROM_EMAIL
 logger = logging.getLogger(__name__)
 
 
-def send_email(to_email: str, subject: str, html_body: str, cc_email: Optional[str] = None) -> Dict[str, Any]:
+def send_email(
+    to_email: str, 
+    subject: str, 
+    html_body: str = None,
+    body: str = None,
+    cc_email: Optional[str] = None,
+    attachment_data: Optional[bytes] = None,
+    attachment_filename: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Send an email via Gmail SMTP.
     
     Args:
         to_email: Primary recipient email address
         subject: Email subject
-        html_body: HTML content of the email
+        html_body: HTML content of the email (preferred)
+        body: Plain text or HTML body (fallback for compatibility)
         cc_email: Optional additional recipient to include in TO field
+        attachment_data: Optional PDF or file data as bytes
+        attachment_filename: Filename for the attachment
         
     Returns:
         Dict with 'success' boolean and 'message' string
     """
     try:
+        # Support both html_body and body parameters for compatibility
+        email_body = html_body or body
+        
         print(f"[EMAIL DEBUG] Attempting to send email to {to_email}")
         print(f"[EMAIL DEBUG] SMTP config: host={SMTP_HOST}, port={SMTP_PORT}, user={SMTP_USER}")
         print(f"[EMAIL DEBUG] Subject: {subject}")
         print(f"[EMAIL DEBUG] CC: {cc_email}")
+        print(f"[EMAIL DEBUG] Has attachment: {attachment_data is not None}")
         
         # Create message
-        msg = MIMEMultipart('alternative')
+        msg = MIMEMultipart('mixed')
         msg['From'] = FROM_EMAIL
         
         # Build recipients list and proper headers: To (primary) and Cc (carbon copy)
@@ -46,8 +61,17 @@ def send_email(to_email: str, subject: str, html_body: str, cc_email: Optional[s
         msg['Subject'] = subject
         
         # Attach HTML body
-        html_part = MIMEText(html_body, 'html')
+        html_part = MIMEText(email_body, 'html')
         msg.attach(html_part)
+        
+        # Attach PDF if provided
+        if attachment_data and attachment_filename:
+            from email.mime.application import MIMEApplication
+            
+            pdf_part = MIMEApplication(attachment_data, _subtype='pdf')
+            pdf_part.add_header('Content-Disposition', 'attachment', filename=attachment_filename)
+            msg.attach(pdf_part)
+            print(f"[EMAIL DEBUG] Attached PDF: {attachment_filename}")
         
         print(f"[EMAIL DEBUG] Connecting to {SMTP_HOST}:{SMTP_PORT}")
         # Connect to Gmail SMTP server

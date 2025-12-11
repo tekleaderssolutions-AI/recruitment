@@ -99,7 +99,7 @@ DB_PASSWORD = <copy from postgres service>
 ```
 SMTP_HOST = smtp.gmail.com
 SMTP_PORT = 587
-CHAT_MODEL = gemini-2.0-flash
+CHAT_MODEL = gemini-2.5-flash
 EMBEDDING_MODEL = text-embedding-004
 GOOGLE_CALENDAR_CREDENTIALS_PATH = credentials.json
 INTERVIEW_DURATION_MINUTES = 60

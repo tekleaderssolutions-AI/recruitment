@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Feedback Form</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .header h1 {
+            color: #1f2937;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6b7280;
+            font-size: 16px;
+        }
+
+        .interview-info {
+            background: #f9fafb;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .info-row {
+            display: flex;
+            padding: 8px 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+            min-width: 150px;
+        }
+
+        .info-value {
+            color: #6b7280;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .form-section h2 {
+            color: #1f2937;
+            font-size: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-section h2::before {
+            content: "";
+            width: 4px;
+            height: 24px;
+            background: #667eea;
+            margin-right: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #374151;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .rating-hint {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .required {
+            color: #ef4444;
+        }
+
+        .success-message,
+        .error-message {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            border: 2px solid #10b981;
+            color: #065f46;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 Interview Feedback Form</h1>
+            <p>Please provide your feedback for this interview</p>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            ✓ Feedback submitted successfully! Thank you for your time.
+        </div>
+
+        <div class="error-message" id="errorMessage">
+            ✗ Failed to submit feedback. Please try again.
+        </div>
+
+        <div class="interview-info" id="interviewInfo">
+            <div class="info-row">
+                <span class="info-label">Candidate:</span>
+                <span class="info-value" id="candidateName">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Position:</span>
+                <span class="info-value" id="position">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">JD ID:</span>
+                <span class="info-value" id="jdId">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Interview Date:</span>
+                <span class="info-value" id="interviewDate">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Interview Time:</span>
+                <span class="info-value" id="interviewTime">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email:</span>
+                <span class="info-value" id="candidateEmail">Loading...</span>
+            </div>
+        </div>
+
+        <form id="feedbackForm">
+            <input type="hidden" id="interviewId" name="interview_id">
+            <input type="hidden" id="jobOpeningId" name="job_opening_id">
+
+            <div class="form-section">
+                <h2>Interview Type</h2>
+                <div class="form-group">
+                    <label for="interviewType">Type <span class="required">*</span></label>
+                    <select id="interviewType" name="interview_type" required>
+                        <option value="">Select interview type</option>
+                        <option value="Face to Face">Face to Face</option>
+                        <option value="Online">Online</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Performance Ratings</h2>
+                <p style="color: #6b7280; margin-bottom: 20px; font-size: 14px;">Rate each category out of 5 (decimals
+                    allowed, e.g., 4.5)</p>
+
+                <div class="form-group">
+                    <label>Technical Skills <span class="required">*</span></label>
+                    <input type="number" name="technical_skills" min="0" max="5" step="0.1" placeholder="e.g., 4.5"
+                        required>
+                    <div class="rating-hint">Enter a value between 0 and 5</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Education/Training <span class="required">*</span></label>
+                    <input type="number" name="education_training" min="0" max="5" step="0.1" placeholder="e.g., 4.5"
+                        required>
+                    <div class="rating-hint">Enter a value between 0 and 5</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Work Experience <span class="required">*</span></label>
+                    <input type="number" name="work_experience" min="0" max="5" step="0.1" placeholder="e.g., 4.5"
+                        required>
+                    <div class="rating-hint">Enter a value between 0 and 5</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Organizational Skills <span class="required">*</span></label>
+                    <input type="number" name="organizational_skills" min="0" max="5" step="0.1" placeholder="e.g., 4.5"
+                        required>
+                    <div class="rating-hint">Enter a value between 0 and 5</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Communication <span class="required">*</span></label>
+                    <input type="number" name="communication" min="0" max="5" step="0.1" placeholder="e.g., 4.5"
+                        required>
+                    <div class="rating-hint">Enter a value between 0 and 5</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Attitude <span class="required">*</span></label>
+                    <input type="number" name="attitude" min="0" max="5" step="0.1" placeholder="e.g., 4.5" required>
+                    <div class="rating-hint">Enter a value between 0 and 5</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Overall Rating <span class="required">*</span></label>
+                    <input type="number" name="overall_rating" min="0" max="5" step="0.1" placeholder="e.g., 4.5"
+                        required>
+                    <div class="rating-hint">Enter a value between 0 and 5</div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Final Assessment</h2>
+
+                <div class="form-group">
+                    <label for="recommendation">Final Recommendation <span class="required">*</span></label>
+                    <select id="recommendation" name="final_recommendation" required>
+                        <option value="">Select recommendation</option>
+                        <option value="Make Offer">Make Offer</option>
+                        <option value="Hold">Hold</option>
+                        <option value="Not Selected">Not Selected</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="comments">Additional Comments</label>
+                    <textarea id="comments" name="comments"
+                        placeholder="Any additional feedback or observations..."></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="btn">Submit Feedback</button>
+        </form>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const interviewId = urlParams.get('id') || window.location.pathname.split('/').pop();
+
+        async function loadInterviewDetails() {
+            try {
+                const response = await fetch(`/api/interview/${interviewId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById('errorMessage').textContent = data.error;
+                    document.getElementById('errorMessage').style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('candidateName').textContent = data.candidate_name;
+                document.getElementById('position').textContent = data.jd_title;
+                document.getElementById('jdId').textContent = data.jd_id || 'N/A';
+                document.getElementById('interviewDate').textContent = data.interview_date;
+                document.getElementById('interviewTime').textContent = data.interview_time;
+                document.getElementById('candidateEmail').textContent = data.candidate_email || 'N/A';
+                document.getElementById('interviewId').value = interviewId;
+                document.getElementById('jobOpeningId').value = data.jd_id || '';
+            } catch (error) {
+                console.error('Error loading interview details:', error);
+                document.getElementById('errorMessage').textContent = 'Failed to load interview details';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        loadInterviewDetails();
+
+        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/feedback/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('feedbackForm').style.display = 'none';
+                    document.getElementById('interviewInfo').style.display = 'none';
+                    window.scrollTo(0, 0);
+                } else {
+                    document.getElementById('errorMessage').textContent = result.error || 'Failed to submit feedback';
+                    document.getElementById('errorMessage').style.display = 'block';
+                    window.scrollTo(0, 0);
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                document.getElementById('errorMessage').textContent = 'Network error. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
+                window.scrollTo(0, 0);
+            }
+        });
+    </script>
+</body>
+
+</html>

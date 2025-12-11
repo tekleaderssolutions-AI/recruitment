@@ -7,6 +7,27 @@
   <title>Resume Ranking Portal</title>
   <link rel="stylesheet" href="/static/styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .user-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-info {
+      color: #4a5568;
+    }
+
+    .user-info strong {
+      color: #2d3748;
+      font-weight: 600;
+    }
+  </style>
 </head>
 
 <body>
@@ -16,7 +37,15 @@
       <p class="subtitle">AI-Powered Recruitment Assistant</p>
     </header>
 
-    <!-- Landing Page / Role Selection -->
+    <!-- User Info & Logout -->
+    <div class="user-header">
+      <div class="user-info">
+        Welcome, <strong id="username-display">User</strong> 👋
+      </div>
+      <button onclick="logout()" class="btn btn-secondary">🚪 Logout</button>
+    </div>
+
+    <!-- Landing Page / Portal Selection -->
     <div id="landing-page">
       <div class="portal-selection">
         <div class="card portal-card" onclick="app.showAdminPortal()">
@@ -28,6 +57,11 @@
           <div class="portal-icon"></div>
           <h2>Recruiter Portal</h2>
           <p>Upload JDs and rank candidates</p>
+        </div>
+        <div class="card portal-card" onclick="window.location.href='/interviews/status'">
+          <div class="portal-icon"></div>
+          <h2>HR Dashboard</h2>
+          <p>View all interviews & meeting links</p>
         </div>
       </div>
     </div>
@@ -107,6 +141,33 @@
     </div>
 
   </div>
+
+  <script>
+    // Check authentication on page load
+    (function checkAuth() {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+
+      if (!token) {
+        // Redirect to login if not authenticated
+        window.location.href = '/static/login.html';
+        return;
+      }
+
+      // Display username
+      if (username) {
+        document.getElementById('username-display').textContent = username;
+      }
+    })();
+
+    // Logout function
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      document.cookie = 'access_token=; path=/; max-age=0';
+      window.location.href = '/static/login.html';
+    }
+  </script>
   <script src="/static/app.js"></script>
 </body>
 

@@ -28,7 +28,7 @@ def get_env(name: str, default: str | None = None, *, required: bool = False) ->
 GEMINI_API_KEY = get_env("GEMINI_API_KEY", required=True)
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
-CHAT_MODEL = get_env("CHAT_MODEL", "gemini-2.0-flash-exp")
+CHAT_MODEL = get_env("CHAT_MODEL", "gemini-2.5-flash-exp")
 EMBEDDING_MODEL = get_env("EMBEDDING_MODEL", "text-embedding-004")
  
 DB_HOST = get_env("DB_HOST", "localhost")

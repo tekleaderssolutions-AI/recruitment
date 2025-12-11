@@ -47,7 +47,7 @@ FROM_EMAIL=$SMTP_USER
 
 # API Keys
 GEMINI_API_KEY=$GEMINI_API_KEY
-CHAT_MODEL=gemini-2.0-flash
+CHAT_MODEL=gemini-2.5-flash
 EMBEDDING_MODEL=text-embedding-004
 
 # Google Calendar
