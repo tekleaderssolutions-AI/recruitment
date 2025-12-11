@@ -95,7 +95,17 @@ app.add_middleware(
 # Start the feedback scheduler when the application starts
 @app.on_event("startup")
 async def startup_event():
-    """Initialize background tasks on application startup."""
+    """Initialize background tasks and DB on application startup."""
+    # 1. Run DB Migrations
+    try:
+        import migrations
+        print("[STARTUP] Running database migrations...")
+        migrations.init_db()
+        print("[STARTUP] Database migrations completed.")
+    except Exception as e:
+        print(f"[STARTUP] WARNING: Database migration failed: {e}")
+
+    # 2. Start Feedback Scheduler
     from feedback_scheduler import start_feedback_scheduler
     start_feedback_scheduler()
     print("[STARTUP] Feedback scheduler started")
