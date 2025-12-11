@@ -19,6 +19,17 @@ import os
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import status
+from pydantic import BaseModel
+from passlib.context import CryptContext
+
+# Password Hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
 
 
@@ -28,14 +39,41 @@ def authenticate_user(username: str, password: str) -> Optional[dict]:
     
     print(f"DEBUG: Attempting login with username='{username}'")
     
+    # 1. Check Admin Credentials (Env Vars)
     if username == admin_username and password == admin_password:
-        print("DEBUG: Login successful!")
+        print("DEBUG: Login successful (Admin Env)!")
         return {
             "id": "admin", 
             "username": admin_username, 
             "password_hash": admin_password
         }
-    print("DEBUG: Login failed - credentials do not match")
+    
+    # 2. Check Database for Users
+    try:
+        from db import get_connection
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, username, password_hash FROM users WHERE username = %s", (username,))
+        user_row = cur.fetchone()
+        conn.close()
+        
+        if user_row:
+            user_id, db_username, db_password_hash = user_row
+            if verify_password(password, db_password_hash):
+                print(f"DEBUG: Login successful for user '{db_username}'")
+                return {
+                    "id": str(user_id),
+                    "username": db_username
+                }
+            else:
+                print("DEBUG: Password verification failed")
+        else:
+             print("DEBUG: User not found in DB")
+             
+    except Exception as e:
+        print(f"DEBUG: DB Auth Error: {e}")
+
+    print("DEBUG: Login failed")
     return None
 
 
@@ -105,6 +143,44 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     
     # Return username as token (simple approach without JWT)
     return {"access_token": user["username"], "token_type": "bearer"}
+
+
+class UserSignup(BaseModel):
+    username: str
+    password: str
+
+@app.post("/signup")
+async def signup(user: UserSignup):
+    """Register a new user."""
+    from db import get_connection
+    import psycopg2
+    
+    if not user.username or not user.password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
+        
+    hashed_password = get_password_hash(user.password)
+    
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        # Check if user exists
+        cur.execute("SELECT 1 FROM users WHERE username = %s", (user.username,))
+        if cur.fetchone():
+             return JSONResponse({"success": False, "error": "Username already exists"}, status_code=400)
+             
+        # Insert new user
+        cur.execute(
+            "INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
+            (user.username, hashed_password)
+        )
+        conn.commit()
+        return {"success": True, "message": "User created successfully"}
+        
+    except Exception as e:
+        conn.rollback()
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        conn.close()
 
 
 @app.get("/feedback-responses-link")
