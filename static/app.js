@@ -132,6 +132,9 @@ const app = {
       try {
         const res = await fetch('/resumes/upload', {
           method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+          },
           body: formData
         });
         const data = await res.json();
@@ -177,6 +180,9 @@ const app = {
       try {
         const res = await fetch('/jd/analyze/pdf', {
           method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+          },
           body: formData
         });
         if (!res.ok) throw new Error(await res.text());

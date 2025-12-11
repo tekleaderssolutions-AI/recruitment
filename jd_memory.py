@@ -102,6 +102,7 @@ def create_memory(
     source_url: str | None = None,
     created_by: str = "system",
     pii_flag: bool = False,
+    user_id: str | None = None,
 ) -> Dict[str, Any]:
     
     memory_uuid = str(uuid.uuid4())
@@ -175,8 +176,8 @@ def create_memory(
     with db_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO memories (id, type, title, text, embedding, metadata, canonical_json, short_id, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s::vector, %s, %s, %s, NOW(), NOW())
+            INSERT INTO memories (id, type, title, text, embedding, metadata, canonical_json, short_id, created_at, updated_at, user_id)
+            VALUES (%s, %s, %s, %s, %s::vector, %s, %s, %s, NOW(), NOW(), %s)
             """,
             (
                 memory_uuid,
@@ -186,7 +187,8 @@ def create_memory(
                 embedding_literal,
                 Json(metadata),
                 Json(canonical_json),
-                short_id
+                short_id,
+                user_id
             )
         )
 

@@ -144,6 +144,45 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     # Return username as token (simple approach without JWT)
     return {"access_token": user["username"], "token_type": "bearer"}
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    """
+    Validate the token (username) and return the user object.
+    For this simple implementation, the token IS the username.
+    In a real app, you would decode a JWT here.
+    """
+    # 1. Check if it's the admin
+    admin_username = os.getenv("ADMIN_USERNAME", "hiring")
+    if token == admin_username:
+         return {
+            "id": "admin", 
+            "username": admin_username
+        }
+
+    # 2. Check DB for user
+    try:
+        from db import get_connection
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, username FROM users WHERE username = %s", (token,))
+        user_row = cur.fetchone()
+        conn.close()
+        
+        if user_row:
+             return {
+                "id": str(user_row[0]),
+                "username": user_row[1]
+            }
+    except Exception as e:
+        print(f"Error validating token: {e}")
+        
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
 
 class UserSignup(BaseModel):
     username: str
@@ -168,9 +207,9 @@ async def signup(user: UserSignup):
         if cur.fetchone():
              return JSONResponse({"success": False, "error": "Username already exists"}, status_code=400)
              
-        # Insert new user
+        # Insert new user with default role
         cur.execute(
-            "INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
+            "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, 'recruiter') RETURNING id",
             (user.username, hashed_password)
         )
         conn.commit()
@@ -952,6 +991,7 @@ async def analyze_jd_pdf(
     job_id: Optional[str] = Form(default=None),
     source_url: Optional[str] = Form(default=None),
     file: UploadFile = File(...),   # required PDF
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Analyze JD from uploaded PDF file.
@@ -969,11 +1009,15 @@ async def analyze_jd_pdf(
         if not raw_jd_text.strip():
             raise HTTPException(status_code=400, detail="JD text is empty after PDF extraction")
  
+        # Extract user_id
+        user_id_val = current_user['id'] if current_user['id'] != 'admin' else None
+
         memory_json = analyze_job_description(
             raw_jd_text=raw_jd_text,
             job_id=job_id,
             source_url=source_url,
             created_by="jd_analyzer_agent_pdf",
+            user_id=user_id_val,
         )
         
         # Add the database ID to the response for embedding-based matching
@@ -991,13 +1035,14 @@ async def analyze_jd_pdf(
 async def upload_resumes(
     files: List[UploadFile] = File(...),
     source_url: Optional[str] = Form(default=None),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Upload MULTIPLE resume PDFs.
     For each:
       - Extract text
       - Parse with LLM
-      - Store resume + vector
+      - Store resume + vector (linked to user)
     Returns basic info for UI.
     """
     if not files:
@@ -1036,10 +1081,14 @@ async def upload_resumes(
                 })
                 continue
 
+            # Extract user_id
+            user_id_val = current_user['id'] if current_user['id'] != 'admin' else None
+
             processed = process_resume_text(
                 raw_text=raw_text,
                 source_url=source_url,
                 file_name=filename,
+                user_id=user_id_val,
             )
             resume_id = processed["resume_id"]
             parsed = processed["parsed"]
@@ -1665,8 +1714,8 @@ async def confirm_interview(interview_id: str, slot: str, outreach_id: str | Non
         raise HTTPException(status_code=500, detail=f"Error confirming interview: {str(e)}")
 
 
-@app.get("/interviewer/response/{interview_id}")
-async def interviewer_response(interview_id: str, action: str):
+@app.get("/interviews/action/{interview_id}/{action}")
+async def handle_approvals(interview_id: str, action: str):
     """
     Handle interviewer's response to interview approval request.
     
@@ -1680,6 +1729,7 @@ async def interviewer_response(interview_id: str, action: str):
     from interview_scheduler import approve_interview, process_reschedule_request
     from fastapi.responses import HTMLResponse
     from db import get_connection
+    from datetime import datetime
     
     if action not in ['approve', 'reject']:
         raise HTTPException(status_code=400, detail="Invalid action. Must be 'approve' or 'reject'")
@@ -1697,7 +1747,52 @@ async def interviewer_response(interview_id: str, action: str):
                 message = "Interview approved! Calendar invite has been sent to both you and the candidate."
                 color = "#28a745"
                 icon = "✅"
-                
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Interview {action.title()}ed</title>
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background-color: #f5f5f5;
+                    }}
+                    .container {{
+                        background: white;
+                        padding: 30px;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        text-align: center;
+                        max-width: 400px;
+                    }}
+                    .icon {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    .message {{
+                        color: {color};
+                        font-size: 18px;
+                        margin-bottom: 20px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="icon">{icon}</div>
+                    <div class="message">{message}</div>
+                    <p>You can close this window now.</p>
+                </div>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=html_content)
+
         else:  # action == 'reject'
             # Show reschedule form
             conn = get_connection()
@@ -1749,10 +1844,12 @@ async def interviewer_response(interview_id: str, action: str):
             color: #333;
             margin-bottom: 10px;
             font-size: 24px;
+            text-align: center;
         }}
         .subtitle {{
             color: #666;
             margin-bottom: 30px;
+            text-align: center;
         }}
         label {{
             display: block;
@@ -1761,8 +1858,8 @@ async def interviewer_response(interview_id: str, action: str):
             color: #333;
             font-weight: bold;
         }}
-        input {{
-            width: 100%;
+        input[type="date"], input[type="time"] {{
+            width: calc(100% - 22px); /* Account for padding and border */
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
@@ -1772,95 +1869,46 @@ async def interviewer_response(interview_id: str, action: str):
         button {{
             width: 100%;
             padding: 12px;
-            background-color: #4CAF50;
-            color: white;
+            background-color: #ffc107; /* Warning color for reschedule */
+            color: #333;
             border: none;
             border-radius: 5px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             margin-top: 20px;
+            transition: background-color 0.3s ease;
         }}
         button:hover {{
-            background-color: #45a049;
+            background-color: #e0a800;
         }}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Reschedule Interview</h1>
-        <p class="subtitle">Candidate: <strong>{candidate_name}</strong><br>Position: <strong>{jd_title}</strong></p>
+        <h1>🗓️ Request Reschedule</h1>
+        <p class="subtitle">Suggest a new time for <strong>{candidate_name}</strong><br>Role: {jd_title}</p>
         
-        <form method="post" action="/interviewer/reschedule/{interview_id}">
-            <label for="new_date">New Date:</label>
-            <input type="date" id="new_date" name="new_date" required>
+        <form action="/interviews/reschedule/{interview_id}" method="post">
+            <label for="new_date">Proposed Date</label>
+            <input type="date" id="new_date" name="new_date" required min="{datetime.now().strftime('%Y-%m-%d')}">
             
-            <label for="new_time">New Time:</label>
+            <label for="new_time">Proposed Time</label>
             <input type="time" id="new_time" name="new_time" required>
             
-            <button type="submit">Propose New Time</button>
+            <button type="submit">Send Proposal</button>
         </form>
     </div>
 </body>
 </html>
-"""
+                """
                 return HTMLResponse(content=html_content)
-                
+
+            except Exception as e:
+                return HTMLResponse(content=f"Error loading form: {str(e)}", status_code=500)
             finally:
                 conn.close()
-        
-        # For approve action, show confirmation
-        html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Response Recorded - Tek Leaders</title>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }}
-        .container {{
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            text-align: center;
-            max-width: 500px;
-        }}
-        .icon {{
-            font-size: 64px;
-            margin-bottom: 20px;
-        }}
-        h1 {{
-            color: {color};
-            margin-bottom: 20px;
-            font-size: 28px;
-        }}
-        p {{
-            color: #333;
-            line-height: 1.6;
-            font-size: 16px;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="icon">{icon}</div>
-        <h1>Response Recorded</h1>
-        <p>{message}</p>
-    </div>
-</body>
-</html>
-"""
-        
-        return HTMLResponse(content=html_content)
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing response: {str(e)}")
 
@@ -2272,7 +2320,7 @@ async def get_interviews_status(
     try:
         cur = conn.cursor()
 
-        # Enhanced query that joins candidate_outreach, memories, and interview_schedules
+        # Enhanced query that joins candidate_outreach, memories, users, and interview_schedules
         base_sql = """
             SELECT 
                 co.id as outreach_id,
@@ -2282,7 +2330,7 @@ async def get_interviews_status(
                 m.id as jd_id,
                 m.short_id,
                 m.title as role,
-                m.metadata->>'created_by' as uploaded_by,
+                u.username as uploaded_by,
                 i.id as interview_id,
                 i.interview_date,
                 i.confirmed_slot_time,
@@ -2300,17 +2348,18 @@ async def get_interviews_status(
                 f_hr.final_recommendation as hr_decision
             FROM candidate_outreach co
             JOIN memories m ON m.id = co.jd_id
+            LEFT JOIN users u ON u.id = m.user_id
             LEFT JOIN interview_schedules i ON i.outreach_id = co.id AND (i.interview_round = 1 OR i.interview_round IS NULL)
             LEFT JOIN feedback f ON f.interview_id = i.id
             LEFT JOIN interview_schedules i_hr ON i_hr.outreach_id = co.id AND i_hr.interview_round = 2
             LEFT JOIN feedback f_hr ON f_hr.interview_id = i_hr.id
         """
 
-        conditions = []
+        filters = []
         params = []
 
         if jd_id:
-            conditions.append("m.id = %s")
+            filters.append("m.id = %s")
             params.append(jd_id)
 
         # Search filter
@@ -2321,35 +2370,35 @@ async def get_interviews_status(
                  OR LOWER(m.title) LIKE LOWER(%s))
             """
             params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
-            conditions.append(search_clause)
+            filters.append(search_clause)
 
         # Status filter logic
         if status:
             s = status.lower()
             if s == "scheduled":
-                conditions.append("i.status = 'scheduled'")
+                filters.append("i.status = 'scheduled'")
             elif s == "completed":
-                conditions.append("i.status = 'completed'")
+                filters.append("i.status = 'completed'")
             elif s == "cancelled":
-                conditions.append("i.status IN ('cancelled', 'declined')")
+                filters.append("i.status IN ('cancelled', 'declined')")
             elif s == "pending":
-                conditions.append("(i.status IN ('pending', 'waiting_approval', 'pending_reschedule') OR i.id IS NULL)")
+                filters.append("(i.status IN ('pending', 'waiting_approval', 'pending_reschedule') OR i.id IS NULL)")
 
         # Decision filter logic (Round 1 Decision)
         if decision:
             d = decision.lower()
             if d == "selected":
-                conditions.append("f.final_recommendation = 'Make Offer'")
+                filters.append("f.final_recommendation = 'Make Offer'")
             elif d == "rejected":
-                conditions.append("f.final_recommendation = 'Not Selected'")
+                filters.append("f.final_recommendation = 'Not Selected'")
             elif d == "hold":
-                conditions.append("f.final_recommendation = 'Hold'")
+                filters.append("f.final_recommendation = 'Hold'")
             elif d == "pending":
-                conditions.append("f.final_recommendation IS NULL")
+                filters.append("f.final_recommendation IS NULL")
 
         where_sql = ""
-        if conditions:
-            where_sql = "WHERE " + " AND ".join(conditions)
+        if filters:
+            where_sql = "WHERE " + " AND ".join(filters)
 
         # Sorting logic
         order_clause = "ORDER BY co.created_at DESC"  # Default
@@ -2441,7 +2490,7 @@ async def get_interviews_status(
                 'candidate_name': str(cand_name) if cand_name else 'N/A',
                 'candidate_email': str(cand_email) if cand_email else 'N/A',
                 'role': str(role) if role else 'N/A',
-                'uploaded_by': 'hiring',
+                'uploaded_by': str(uploaded_by) if uploaded_by else 'System',
                 'interviewer_email': str(INTERVIEWER_EMAIL) if INTERVIEWER_EMAIL else 'N/A',
                 'interview_date': str(date_str) if date_str else 'N/A',
                 'interview_time': str(time_str) if time_str else 'N/A',
@@ -2499,6 +2548,7 @@ async def get_interviews_status(
             safe_jd_id_val = html.escape(str(jd_id_val)) if jd_id_val else ""
             safe_jd_display_id = html.escape(str(jd_display_id))
             safe_role = html.escape(str(role)) if role else ""
+            safe_uploaded_by = html.escape(str(uploaded_by)) if uploaded_by else "System"
             safe_event_link = str(event_link).replace('"', '&quot;') if event_link else ""
             
             # Calendar Link
@@ -2506,7 +2556,7 @@ async def get_interviews_status(
 
             table_rows += f"""
             <tr>
-                <td>hiring</td>
+                <td>{safe_uploaded_by}</td>
                 <td><span title="{safe_jd_id_val}">{safe_jd_display_id}</span></td>
                 <td>{safe_role}</td>
                 <td>{date_str} {time_str}</td>

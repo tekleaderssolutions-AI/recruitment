@@ -12,6 +12,7 @@ def process_resume_text(
     *,
     source_url: Optional[str] = None,
     file_name: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     if not raw_text.strip():
         raise ValueError("Resume text is empty")
@@ -22,6 +23,7 @@ def process_resume_text(
         raw_text=raw_text,
         source_url=source_url or file_name,
         file_name=file_name,
+        user_id=user_id,
     )
 
     return {

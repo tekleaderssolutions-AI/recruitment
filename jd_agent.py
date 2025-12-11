@@ -19,6 +19,7 @@ def analyze_job_description(
     job_id: Optional[str] = None,
     source_url: Optional[str] = None,
     created_by: str = "jd_analyzer",
+    user_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Full JD processing pipeline used by the FastAPI layer.
@@ -38,6 +39,7 @@ def analyze_job_description(
         source_url=source_url,
         created_by=created_by,
         pii_flag=bool(pii_types),
+        user_id=user_id,
     )
 
 

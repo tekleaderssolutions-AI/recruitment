@@ -51,6 +51,7 @@ def save_parsed_resume_and_memory(
     raw_text: str,
     source_url: str | None = None,
     file_name: str | None = None,
+    user_id: str | None = None,
 ) -> str:
     """
     Persist a parsed resume into the resumes table (including its embedding and metadata).
@@ -97,9 +98,10 @@ def save_parsed_resume_and_memory(
               metadata,
               canonical_json,
               created_at,
-              updated_at
+              updated_at,
+              user_id
             )
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s::vector,%s,%s,NOW(),NOW())
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s::vector,%s,%s,NOW(),NOW(),%s)
             """,
             [
                 resume_id,
@@ -112,6 +114,7 @@ def save_parsed_resume_and_memory(
                 embedding_literal,
                 Json(resume_metadata),
                 Json(parsed_resume),
+                user_id
             ],
         )
         conn.commit()

@@ -298,6 +298,21 @@ def init_db():
         """)
 
         conn.commit()
+
+        # 16. Add user_id to memories and resumes for tracking uploader
+        cur.execute("""
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='memories' AND column_name='user_id') THEN 
+                    ALTER TABLE memories ADD COLUMN user_id UUID REFERENCES users(id);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='resumes' AND column_name='user_id') THEN 
+                    ALTER TABLE resumes ADD COLUMN user_id UUID REFERENCES users(id);
+                END IF;
+            END $$;
+        """)
+
+        conn.commit()
         cur.close()
         print("Database initialized successfully.")
     except Exception as e:
